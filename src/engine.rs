@@ -16,8 +16,8 @@ use model::{DrawModel, Vertex};
 
 use crate::{
     camera,
-    model::{self, Model},
-    resources, texture, MathMesh,
+    model::{self, Model, Material},
+    resources::{self, load_texture}, texture::{self, Texture}, MathMesh, gradient_descent,
 };
 
 #[repr(C)]
@@ -140,6 +140,7 @@ pub struct State {
     texture_bind_group_layout: wgpu::BindGroupLayout,
     pub mouse_pressed: bool,
     pub mouse_locked: bool,
+    custom_mesh_texture: Material
 }
 
 impl State {
@@ -169,7 +170,7 @@ impl State {
             window.set_inner_size(PhysicalSize::new(512, 512));
         }
 
-        window.set_cursor_visible(false);
+        if mouse_lock{window.set_cursor_visible(false);}
 
         #[cfg(target_arch = "wasm32")]
         {
@@ -382,7 +383,7 @@ impl State {
             vertex: wgpu::VertexState {
                 module: &shader,
                 entry_point: "vs_main",
-                buffers: &[model::ModelVertex::desc(), InstanceRaw::desc()],
+                buffers: &[gradient_descent::Vertex::desc()],
             },
             fragment: Some(wgpu::FragmentState {
                 module: &shader,
@@ -425,6 +426,21 @@ impl State {
             // indicates how many array layers the attachments will have.
             multiview: None,
         });
+        let diffuse_texture = load_texture("cube-diffuse.jpg", &device, &queue).await.unwrap();
+        let bind_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            layout: &texture_bind_group_layout,
+            entries: &[
+                wgpu::BindGroupEntry {
+                    binding: 0,
+                    resource: wgpu::BindingResource::TextureView(&diffuse_texture.view),
+                },
+                wgpu::BindGroupEntry {
+                    binding: 1,
+                    resource: wgpu::BindingResource::Sampler(&diffuse_texture.sampler),
+                },
+            ],
+            label: None,
+        });
         window.set_visible(true);
         (
             Self {
@@ -445,6 +461,11 @@ impl State {
                 texture_bind_group_layout,
                 mouse_pressed: false,
                 mouse_locked: mouse_lock,
+                custom_mesh_texture: model::Material {
+                    name: "name".to_string(),
+                    diffuse_texture,
+                    bind_group,
+                }
             },
             event_loop,
         )
@@ -599,16 +620,20 @@ impl State {
             for game_object in entities {
                 match game_object {
                     GameObject::Model(container) => {
-                        render_pass.set_vertex_buffer(1, container.buffer.slice(..));
+                        /*render_pass.set_vertex_buffer(1, container.buffer.slice(..));
 
                         render_pass.draw_model_instanced(
                             &container.model,
                             0..container.length,
                             &self.camera_bind_group,
-                        );
+                        );*/
                     }
                     GameObject::ScreenSpaceUI() => {}
-                    GameObject::CustomMesh(mesh) => {}
+                    GameObject::CustomMesh(mesh) => {render_pass.set_vertex_buffer(0, mesh.vertex_buffer.slice(..));
+                        render_pass.set_index_buffer(mesh.index_buffer.slice(..), wgpu::IndexFormat::Uint32);
+                        render_pass.set_bind_group(0, &self.custom_mesh_texture.bind_group, &[]);
+                        render_pass.set_bind_group(1, &self.camera_bind_group, &[]);
+                        render_pass.draw_indexed(0..mesh.num_elements, 0, 0..1);}
                 }
             }
         }
