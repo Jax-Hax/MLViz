@@ -1,4 +1,4 @@
-use eval::{to_value, Error, Expr, Value};
+use eval::{Error, Expr, Value};
 use wgpu::{util::DeviceExt, Device};
 
 use crate::MathMesh;
@@ -35,6 +35,14 @@ pub fn build_mesh(eval_exp: &str, x: u32, y: u32, device: &Device) -> Result<Mat
     let mut vertices: Vec<Vertex> = vec![];
     let mut indices: Vec<u32> = vec![];
     let mut losses: Vec<Vec<Vertex>> = vec![];
+    let max = Expr::new(eval_exp).value("x", x).value("y", y).exec();
+    let max_num = match max {
+                Ok(val) => match val {
+                    Value::Number(string) => string.as_f64().unwrap() as f32,
+                    _ => return Err(Error::Custom("Not a numeric answer".to_string())),
+                },
+                Err(err) => return Err(err),
+            };
     for i in 0..x + 1 {
         let mut vec2 = vec![];
         for j in 0..y + 1 {
@@ -42,8 +50,8 @@ pub fn build_mesh(eval_exp: &str, x: u32, y: u32, device: &Device) -> Result<Mat
             match z {
                 Ok(val) => match val {
                     Value::Number(string) => vec2.push(Vertex {
-                        position: [i as f32, j as f32, string.as_f64().unwrap() as f32],
-                        tex_coords: [x as f32 / i as f32, j as f32 / i as f32],
+                        position: [i as f32 / x as f32, string.as_f64().unwrap() as f32 / max_num, j as f32 / y as f32],
+                        tex_coords: [i as f32 / x as f32, j as f32 / y as f32],
                     }),
                     _ => return Err(Error::Custom("Not a numeric answer".to_string())),
                 },

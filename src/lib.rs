@@ -49,7 +49,7 @@ pub async fn run() {
     entities.push(instances);
 
 
-    let result = build_mesh("max(0.46*x,0) + max(0.23*y,0)",100,100,&state.device);
+    let result = build_mesh("x*x + y*y",100,100,&state.device);
     match result {
         Ok(mesh) => entities.push(GameObject::CustomMesh(mesh)),
         Err(err) => {println!("{}",err); return;}
