@@ -1,4 +1,4 @@
-use crate::{engine::{GameObject, Instance, InstanceContainer, State}, gradient_descent::build_mesh};
+use crate::{engine::{GameObject, Instance, InstanceContainer, State}, gradient_descent::build_mesh,gradient_descent::gradient_descent};
 use cgmath::prelude::*;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
@@ -54,7 +54,17 @@ pub async fn run() {
         Ok(mesh) => entities.push(GameObject::CustomMesh(mesh)),
         Err(err) => {println!("{}",err); return;}
     }
-
+    let mut x = rustygrad::Value::from(100.0);
+    let mut y = rustygrad::Value::from(100.0);
+    for _idx in 1..50 {
+        let x1 = x.clone();
+        let y1 = y.clone();
+        let loss = &x1 * &x1 + &y1 * &y1;
+        loss.backward();
+        x = x + x1.borrow().grad * -0.01;
+        y = y + y1.borrow().grad * -0.01;
+        //let loss = Expr::new("x*x + y*y").value("x", &x).value("y", &y).exec().unwrap().as_f64().unwrap();
+    }
     //render loop
     let mut last_render_time = instant::Instant::now();
     event_loop.run(move |event, _, control_flow| {
@@ -102,6 +112,19 @@ pub async fn run() {
                     instance.position[0] += 0.01;
                 }*/
                 state.update(dt);
+
+
+                let x1 = x.clone();
+                let y1 = y.clone();
+                let x2 = x.clone();
+                let y2 = y.clone();
+                let loss = &x1 * &x1 + &y1 * &y1;
+                loss.backward();
+                x = x2 + x1.borrow().grad * -0.0001;
+                y = y2 + y1.borrow().grad * -0.0001;
+                //let loss = Expr::new("x*x + y*y").value("x", &x).value("y", &y).exec().unwrap().as_f64().unwrap();
+
+
                 //state.update_instances(&entities[0]);
 
                 match state.render(&entities) {

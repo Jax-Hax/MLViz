@@ -101,3 +101,18 @@ pub fn build_mesh(eval_exp: &str, x: u32, y: u32, device: &Device) -> Result<Mat
         num_elements: indices.len() as u32,
     })
 }
+
+pub fn gradient_descent() {
+    let mut x = rustygrad::Value::from(100.0);
+    let mut y = rustygrad::Value::from(100.0);
+    for _idx in 1..50 {
+        let x1 = x.clone();
+        let y1 = y.clone();
+        let loss = &x1 * &x1 + &y1 * &y1;
+        loss.backward();
+        x = x + x1.borrow().grad * -0.01;
+        y = y + y1.borrow().grad * -0.01;
+        //let loss = Expr::new("x*x + y*y").value("x", &x).value("y", &y).exec().unwrap().as_f64().unwrap();
+        println!("loss: {:#?}", loss);
+    }
+}

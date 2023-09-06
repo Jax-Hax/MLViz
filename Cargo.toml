@@ -21,6 +21,7 @@ winit = "0.28"
 instant = "0.1"
 getrandom = { version = "0.2", features = ["js"] }
 eval = "0.4"
+rustygrad = "0.1.1"
 [dependencies.image]
 version = "0.24"
 default-features = false
